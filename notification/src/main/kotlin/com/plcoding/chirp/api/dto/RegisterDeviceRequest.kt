@@ -1,10 +1,14 @@
 package com.plcoding.chirp.api.dto
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
 import jakarta.validation.constraints.NotBlank
 
-data class RegisterDeviceRequest(
+data class RegisterDeviceRequest @JsonCreator constructor(
+    @JsonProperty("token")
     @field:NotBlank
     val token: String,
+    @JsonProperty("platform")
     val platform: PlatformDto
 )
 

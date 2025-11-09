@@ -1,5 +1,8 @@
 package com.plcoding.chirp.api.dto
 
-data class RefreshRequest(
-    val refreshToken: String
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
+
+data class RefreshRequest @JsonCreator constructor(
+    @JsonProperty("refreshToken") val refreshToken: String
 )
