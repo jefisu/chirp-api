@@ -21,6 +21,7 @@ dependencies {
     implementation(libs.spring.boot.starter.websocket)
 
     implementation(libs.spring.boot.starter.data.jpa)
+    implementation(libs.jackson.datatype.jsr310)
     runtimeOnly(libs.postgresql)
 
     testImplementation(kotlin("test"))

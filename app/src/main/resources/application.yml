@@ -5,16 +5,16 @@ spring:
 
   data:
     redis:
-      host: "redis-14109.c325.us-east-1-4.ec2.redns.redis-cloud.com"
+      host: "redis-14065.crce216.sa-east-1-2.ec2.redns.redis-cloud.com"
       password: ${REDIS_PASSWORD}
       username: "default"
-      port: 14109
+      port: 14065
       connect-timeout: 5000ms
       timeout: 2000ms
 
   datasource:
-    url: jdbc:postgresql://db.wxufamvuixbezaecetbe.supabase.co:5432/postgres?sslmode=require
-    username: postgres
+    url: jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require
+    username: postgres.qdxdchomvltnkiyswxwb
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
@@ -43,7 +43,7 @@ spring:
 
   mail:
     port: 587
-    password: ${MAILGUN_PASSWORD}
+    password: ${MAILTRAP_PASSWORD}
     properties:
       mail:
         smtp:
@@ -52,12 +52,12 @@ spring:
             enable: true
 
   rabbitmq:
-    host: seal.lmq.cloudamqp.com
+    host: jackal.rmq.cloudamqp.com
     password: ${RABBITMQ_PASSWORD}
-    username: udnlwpbs
+    username: zcqnfzal
     ssl:
       enabled: true
-    virtual-host: udnlwpbs
+    virtual-host: zcqnfzal
     listener:
       simple:
         acknowledge-mode: auto
@@ -96,7 +96,7 @@ nginx:
     - "10.0.0.5/32" # nginx server IP (if separate machine)
 
 supabase:
-  url: "https://wxufamvuixbezaecetbe.supabase.co"
+  url: "https://qdxdchomvltnkiyswxwb.supabase.co"
   service-key: ${SUPABASE_SERVICE_KEY}
 
 firebase:
