@@ -20,6 +20,7 @@ chirp:
       apply-limit: false
   web-socket:
     allowed-origin: "http://localhost:8080"
+  api-key-required: false
 
 logging:
   level:

@@ -21,6 +21,7 @@ chirp:
       apply-limit: true
   web-socket:
     allowed-origin: "https://chirp.pl-coding.com"
+  api-key-required: true
 
 logging:
   level:
