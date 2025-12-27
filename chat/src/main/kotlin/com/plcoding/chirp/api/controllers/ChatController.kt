@@ -5,10 +5,9 @@ import com.plcoding.chirp.api.dto.ChatDto
 import com.plcoding.chirp.api.dto.ChatMessageDto
 import com.plcoding.chirp.api.dto.CreateChatRequest
 import com.plcoding.chirp.api.mappers.toChatDto
-import com.plcoding.chirp.service.ChatService
 import com.plcoding.chirp.api.util.requestUserId
 import com.plcoding.chirp.domain.type.ChatId
-import com.plcoding.chirp.service.ChatMessageService
+import com.plcoding.chirp.service.ChatService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping

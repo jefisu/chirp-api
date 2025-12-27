@@ -412,6 +412,7 @@ class ChatWebSocketHandler(
             chatId = dto.chatId,
             senderId = senderId,
             content = dto.content,
+            imageUrls = dto.imageUrls,
             messageId = dto.messageId
         )
 

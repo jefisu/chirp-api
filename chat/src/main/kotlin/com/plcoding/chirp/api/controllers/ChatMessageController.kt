@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/messages")
-class ChatMessageController(private val chatMessageService: ChatMessageService) {
+class ChatMessageController(
+    private val chatMessageService: ChatMessageService,
+) {
 
     @DeleteMapping("/{messageId}")
     fun deleteMessage(

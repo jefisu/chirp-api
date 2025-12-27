@@ -1,8 +1,10 @@
 package com.plcoding.chirp.infra.storage
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.plcoding.chirp.domain.exception.InvalidProfilePictureException
 import com.plcoding.chirp.domain.exception.StorageException
-import com.plcoding.chirp.domain.models.ProfilePictureUploadCredentials
+import com.plcoding.chirp.domain.models.FileUploadCredentials
 import com.plcoding.chirp.domain.type.UserId
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -24,30 +26,38 @@ class SupabaseStorageService(
         )
     }
 
-    fun generateSignedUploadUrl(userId: UserId, mimeType: String): ProfilePictureUploadCredentials {
+    fun generateSignedUploadUrl(
+        userId: UserId,
+        mimeType: String,
+        destination: StorageDestination
+    ): FileUploadCredentials {
         val extension = allowedMimeTypes[mimeType]
             ?: throw InvalidProfilePictureException("Invalid mime type $mimeType")
 
         val fileName = "user_${userId}_${UUID.randomUUID()}.$extension"
-        val path = "profile-pictures/$fileName"
+        val path = when (destination) {
+            is ProfilePicture -> "${destination.bucket}/$fileName"
+            is ChatImage -> "${destination.bucket}/${destination.chatId}/$fileName"
+        }
 
         val publicUrl = "$supabaseUrl/storage/v1/object/public/$path"
+        val uploadUrl = createSignedUrl(
+            path = path,
+            expiresInSeconds = 300
+        )
 
-        return ProfilePictureUploadCredentials(
-            uploadUrl = createSignedUrl(
-                path = path,
-                expiresInSeconds = 300
-            ),
+        return FileUploadCredentials(
+            uploadUrl = uploadUrl,
             publicUrl = publicUrl,
             headers = mapOf(
-                "Content-Type" to mimeType
+                "Content-Type" to mimeType,
             ),
             expiresAt = Instant.now().plusSeconds(300)
         )
     }
 
     fun deleteFile(url: String) {
-        val path = if(url.contains("/object/public/")) {
+        val path = if (url.contains("/object/public/")) {
             url.substringAfter("/object/public/")
         } else throw StorageException("Invalid file URL format")
 
@@ -59,7 +69,7 @@ class SupabaseStorageService(
             .retrieve()
             .toBodilessEntity()
 
-        if(response.statusCode.isError) {
+        if (response.statusCode.isError) {
             throw StorageException("Unable to delete file: ${response.statusCode.value()}")
         }
     }
@@ -84,7 +94,8 @@ class SupabaseStorageService(
         return "$supabaseUrl/storage/v1${response.url}"
     }
 
-    private data class SignedUploadResponse(
+    private data class SignedUploadResponse @JsonCreator constructor(
+        @JsonProperty("url")
         val url: String
     )
 }

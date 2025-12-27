@@ -8,6 +8,7 @@ data class ChatMessage(
     val id: ChatMessageId,
     val chatId: ChatId,
     val sender: ChatParticipant,
-    val content: String,
-    val createdAt: Instant
+    val content: String?,
+    val createdAt: Instant,
+    val imageUrls: List<String> = emptyList()
 )

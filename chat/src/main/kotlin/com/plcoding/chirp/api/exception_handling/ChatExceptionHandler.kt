@@ -2,8 +2,8 @@ package com.plcoding.chirp.api.exception_handling
 
 import com.plcoding.chirp.domain.exception.ChatNotFoundException
 import com.plcoding.chirp.domain.exception.ChatParticipantNotFoundException
-import com.plcoding.chirp.domain.exception.ForbiddenException
 import com.plcoding.chirp.domain.exception.InvalidChatSizeException
+import com.plcoding.chirp.domain.exception.InvalidMessageException
 import com.plcoding.chirp.domain.exception.InvalidProfilePictureException
 import com.plcoding.chirp.domain.exception.MessageNotFoundException
 import com.plcoding.chirp.domain.exception.StorageException
@@ -42,6 +42,13 @@ class ChatExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     fun onInvalidProfilePicture(e: StorageException) = mapOf(
         "code" to "STORAGE_ERROR",
+        "message" to e.message
+    )
+
+    @ExceptionHandler(InvalidMessageException::class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    fun onInvalidMessage(e: StorageException) = mapOf(
+        "code" to "INVALID_MESSAGE_ERROR",
         "message" to e.message
     )
 }

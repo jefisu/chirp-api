@@ -27,7 +27,11 @@ configure<KotlinJvmProjectExtension> {
 
 tasks.withType<KotlinCompile> {
     compilerOptions {
-        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
+        freeCompilerArgs.addAll(
+            "-Xjsr305=strict",
+            "-Xannotation-default-target=param-property",
+            "-Xcontext-sensitive-resolution"
+        )
         jvmTarget = JvmTarget.JVM_21
     }
 }

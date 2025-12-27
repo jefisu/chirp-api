@@ -44,6 +44,7 @@ fun ChatMessageEntity.toChatMessage(): ChatMessage {
         chatId = chatId,
         sender = sender.toChatParticipant(),
         content = content,
+        imageUrls = images.map { it.url },
         createdAt = createdAt
     )
 }

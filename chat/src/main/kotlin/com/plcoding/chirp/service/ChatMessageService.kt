@@ -7,12 +7,14 @@ import com.plcoding.chirp.domain.events.chat.ChatEvent
 import com.plcoding.chirp.domain.exception.ChatNotFoundException
 import com.plcoding.chirp.domain.exception.ChatParticipantNotFoundException
 import com.plcoding.chirp.domain.exception.ForbiddenException
+import com.plcoding.chirp.domain.exception.InvalidMessageException
 import com.plcoding.chirp.domain.exception.MessageNotFoundException
 import com.plcoding.chirp.domain.models.ChatMessage
 import com.plcoding.chirp.domain.type.ChatId
 import com.plcoding.chirp.domain.type.ChatMessageId
 import com.plcoding.chirp.domain.type.UserId
 import com.plcoding.chirp.infra.database.entities.ChatMessageEntity
+import com.plcoding.chirp.infra.database.entities.ChatMessageImageEntity
 import com.plcoding.chirp.infra.database.mappers.toChatMessage
 import com.plcoding.chirp.infra.database.repositories.ChatMessageRepository
 import com.plcoding.chirp.infra.database.repositories.ChatParticipantRepository
@@ -46,7 +48,8 @@ class ChatMessageService(
     fun sendMessage(
         chatId: ChatId,
         senderId: UserId,
-        content: String,
+        content: String?,
+        imageUrls: List<String> = emptyList(),
         messageId: ChatMessageId? = null
     ): ChatMessage {
         val chat = chatRepository.findChatById(chatId, senderId)
@@ -54,15 +57,23 @@ class ChatMessageService(
         val sender = chatParticipantRepository.findByIdOrNull(senderId)
             ?: throw ChatParticipantNotFoundException(senderId)
 
-        val savedMessage = chatMessageRepository.saveAndFlush(
-            ChatMessageEntity(
-                id = messageId ?: UUID.randomUUID(),
-                content = content.trim(),
-                chatId = chatId,
-                chat = chat,
-                sender = sender
-            )
-        )
+        if (content.isNullOrBlank() && imageUrls.isEmpty()) {
+            throw InvalidMessageException()
+        }
+
+        val messageEntity = ChatMessageEntity(
+            id = messageId ?: UUID.randomUUID(),
+            content = content?.trim(),
+            chatId = chatId,
+            chat = chat,
+            sender = sender
+        ).apply {
+            images = imageUrls.map { url ->
+                ChatMessageImageEntity(url = url, message = this)
+            }
+        }
+
+        val savedMessage = chatMessageRepository.saveAndFlush(messageEntity)
 
         eventPublisher.publish(
             event = ChatEvent.NewMessage(
@@ -70,7 +81,7 @@ class ChatMessageService(
                 senderUsername = sender.username,
                 recipientIds = chat.participants.map { it.userId }.toSet(),
                 chatId = chatId,
-                message = savedMessage.content
+                message = savedMessage.content ?: "Image(s)"
             )
         )
 

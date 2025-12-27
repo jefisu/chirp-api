@@ -3,9 +3,10 @@ package com.plcoding.chirp.service
 import com.plcoding.chirp.domain.event.ProfilePictureUpdatedEvent
 import com.plcoding.chirp.domain.exception.ChatParticipantNotFoundException
 import com.plcoding.chirp.domain.exception.InvalidProfilePictureException
-import com.plcoding.chirp.domain.models.ProfilePictureUploadCredentials
+import com.plcoding.chirp.domain.models.FileUploadCredentials
 import com.plcoding.chirp.domain.type.UserId
 import com.plcoding.chirp.infra.database.repositories.ChatParticipantRepository
+import com.plcoding.chirp.infra.storage.StorageDestination
 import com.plcoding.chirp.infra.storage.SupabaseStorageService
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -27,10 +28,11 @@ class ProfilePictureService(
     fun generateUploadCredentials(
         userId: UserId,
         mimeType: String,
-    ): ProfilePictureUploadCredentials {
+    ): FileUploadCredentials {
         return supabaseStorageService.generateSignedUploadUrl(
             userId = userId,
-            mimeType = mimeType
+            mimeType = mimeType,
+            destination = StorageDestination.ProfilePicture
         )
     }
 
