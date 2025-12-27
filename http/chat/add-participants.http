@@ -1,0 +1,10 @@
+@chatId = your_chat_id_here
+
+### Add Participants To Chat
+POST {{host}}/api/chat/{{chatId}}/add
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "userIds": ["user_id_3"]
+}

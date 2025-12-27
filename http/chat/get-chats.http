@@ -1,0 +1,3 @@
+### Get Chats For User
+GET {{host}}/api/chat
+Authorization: Bearer {{authToken}}

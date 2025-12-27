@@ -1,0 +1,8 @@
+### Login
+POST {{host}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "jefisu2@yopmail.com",
+  "password": "1234567aB@"
+}

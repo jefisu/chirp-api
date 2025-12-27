@@ -1,0 +1,9 @@
+### Register
+POST {{host}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "username": "testuser",
+  "password": "Password123!"
+}

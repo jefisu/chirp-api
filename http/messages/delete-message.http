@@ -1,0 +1,5 @@
+@messageId = your_message_id_here
+
+### Delete Message
+DELETE {{host}}/api/messages/{{messageId}}
+Authorization: Bearer {{authToken}}

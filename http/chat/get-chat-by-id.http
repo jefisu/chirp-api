@@ -1,0 +1,5 @@
+@chatId = your_chat_id_here
+
+### Get Chat By ID
+GET {{host}}/api/chat/{{chatId}}
+Authorization: Bearer {{authToken}}

@@ -1,0 +1,7 @@
+### Refresh Token
+POST {{host}}/api/auth/refresh
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "your_refresh_token_here"
+}

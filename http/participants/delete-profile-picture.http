@@ -1,0 +1,3 @@
+### Delete Profile Picture
+DELETE {{host}}/api/participants/profile-picture
+Authorization: Bearer {{authToken}}

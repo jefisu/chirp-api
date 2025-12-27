@@ -1,0 +1,3 @@
+### Get Profile Picture Upload URL
+POST {{host}}/api/participants/profile-picture-upload?mimeType=image/jpeg
+Authorization: Bearer {{authToken}}

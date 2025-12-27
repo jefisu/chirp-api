@@ -1,0 +1,7 @@
+### Get Chat Participant (Authenticated User)
+GET {{host}}/api/participants
+Authorization: Bearer {{authToken}}
+
+### Get Chat Participant By Username or Email
+GET {{host}}/api/participants?query=testuser
+Authorization: Bearer {{authToken}}

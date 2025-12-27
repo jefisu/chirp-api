@@ -1,0 +1,5 @@
+@deviceToken = your_device_token_here
+
+### Unregister Device Token
+DELETE {{host}}/api/notification/{{deviceToken}}
+Authorization: Bearer {{authToken}}

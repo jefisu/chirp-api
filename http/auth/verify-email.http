@@ -1,0 +1,2 @@
+### Verify Email
+GET {{host}}/api/auth/verify?token=verification_token_here

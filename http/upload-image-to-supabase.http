@@ -1,0 +1,12 @@
+### Upload Image to Supabase
+# 1. Run generate-image-upload-credentials.http to get the uploadUrl.
+# 2. Paste the uploadUrl into the variable below.
+# 3. Ensure you have a file to upload or provide content.
+
+@uploadUrl = https://qdxdchomvltnkiyswxwb.supabase.co/storage/v1/object/upload/sign/chat-images/5bfb70bf-ec65-407c-b958-52178f08de7f/user_f5773978-63ab-43b0-8abf-2e5af0da6ec9_a33075ae-ea93-4cac-ba35-e844687c99d4.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8xYTIwM2QyZS05MzdhLTRlNjMtOGFiYS0zZTEyOGExOTA4OTIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJjaGF0LWltYWdlcy81YmZiNzBiZi1lYzY1LTQwN2MtYjk1OC01MjE3OGYwOGRlN2YvdXNlcl9mNTc3Mzk3OC02M2FiLTQzYjAtOGFiZi0yZTVhZjBkYTZlYzlfYTMzMDc1YWUtZWE5My00Y2FjLWJhMzUtZTg0NDY4N2M5OWQ0LmpwZyIsInVwc2VydCI6ZmFsc2UsImlhdCI6MTc2Njg3NTE4NywiZXhwIjoxNzY2ODgyMzg3fQ.o3hnYkUT1fz5xDqFdTIKbvPWiIGoU7KtB80rt4dMF58
+@contentType = image/jpeg
+
+PUT {{uploadUrl}}
+Content-Type: {{contentType}}
+
+< ../../assets/one_piece.jpeg

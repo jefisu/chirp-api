@@ -1,0 +1,7 @@
+### Logout
+POST {{host}}/api/auth/logout
+Content-Type: {{contentType}}
+
+{
+  "refreshToken": "your_refresh_token_here"
+}

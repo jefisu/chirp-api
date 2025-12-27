@@ -1,0 +1,9 @@
+### Register Device Token
+POST {{host}}/api/notification/register
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "token": "device_token_string",
+  "platform": "ANDROID"
+}

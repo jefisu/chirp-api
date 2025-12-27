@@ -1,0 +1,8 @@
+### Create Chat
+POST {{host}}/api/chat
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "otherUserIds": ["eb8272b5-5748-411e-b89f-6ed617adba02"]
+}

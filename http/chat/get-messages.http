@@ -1,0 +1,5 @@
+@chatId = your_chat_id_here
+
+### Get Messages For Chat
+GET {{host}}/api/chat/{{chatId}}/messages?pageSize=20
+Authorization: Bearer {{authToken}}

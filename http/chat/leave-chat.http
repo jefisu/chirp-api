@@ -1,0 +1,5 @@
+@chatId = your_chat_id_here
+
+### Leave Chat
+DELETE {{host}}/api/chat/{{chatId}}/leave
+Authorization: Bearer {{authToken}}

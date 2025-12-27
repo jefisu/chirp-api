@@ -1,0 +1,7 @@
+### Resend Verification
+POST {{host}}/api/auth/resend-verification
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com"
+}

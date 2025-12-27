@@ -1,0 +1,8 @@
+### Confirm Profile Picture Upload
+POST {{host}}/api/participants/confirm-profile-picture
+Content-Type: {{contentType}}
+Authorization: Bearer {{authToken}}
+
+{
+  "publicUrl": "https://example.com/profile-pic.jpg"
+}
