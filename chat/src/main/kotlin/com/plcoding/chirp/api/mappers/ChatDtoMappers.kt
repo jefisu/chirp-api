@@ -23,7 +23,7 @@ fun ChatMessage.toChatMessageDto(): ChatMessageDto {
     return ChatMessageDto(
         id = id,
         chatId = chatId,
-        content = content.orEmpty(),
+        content = content,
         imageUrls = imageUrls,
         createdAt = createdAt,
         senderId = sender.userId
