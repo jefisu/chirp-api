@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import jakarta.validation.constraints.NotBlank
 
-data class ChatImageUploadRequest @JsonCreator constructor(
+data class ChatFileUploadRequest @JsonCreator constructor(
     @JsonProperty("fileName")
     @field:NotBlank
     val fileName: String,

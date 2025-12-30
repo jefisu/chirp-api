@@ -44,7 +44,7 @@ fun ChatMessageEntity.toChatMessage(): ChatMessage {
         chatId = chatId,
         sender = sender.toChatParticipant(),
         content = content,
-        imageUrls = images.map { it.url },
+        attachedFiles = attachedFiles.map { it.toChatMessageFile() },
         createdAt = createdAt
     )
 }

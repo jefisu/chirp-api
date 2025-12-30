@@ -1,5 +1,5 @@
 ### Upload Image to Supabase
-# 1. Run generate-image-upload-credentials.http to get the uploadUrl.
+# 1. Run generate-file-upload-credentials.http to get the uploadUrl.
 # 2. Paste the uploadUrl into the variable below.
 # 3. Ensure you have a file to upload or provide content.
 

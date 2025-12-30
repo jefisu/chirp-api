@@ -2,7 +2,7 @@ package com.plcoding.chirp.api.dto
 
 import java.time.Instant
 
-data class ChatImageUploadDto(
+data class ChatFileUploadDto(
     val fileName: String,
     val uploadUrl: String,
     val publicUrl: String,

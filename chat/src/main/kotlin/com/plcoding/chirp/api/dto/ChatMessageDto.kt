@@ -11,5 +11,5 @@ data class ChatMessageDto(
     val content: String?,
     val createdAt: Instant,
     val senderId: UserId,
-    val imageUrls: List<String> = emptyList()
+    val attachedFiles: List<ChatMessageFileDto>
 )

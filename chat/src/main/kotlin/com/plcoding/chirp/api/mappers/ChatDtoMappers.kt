@@ -24,7 +24,7 @@ fun ChatMessage.toChatMessageDto(): ChatMessageDto {
         id = id,
         chatId = chatId,
         content = content,
-        imageUrls = imageUrls,
+        attachedFiles = attachedFiles.map { it.toChatMessageFileDto() },
         createdAt = createdAt,
         senderId = sender.userId
     )

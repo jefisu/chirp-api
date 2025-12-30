@@ -63,5 +63,5 @@ class ChatMessageEntity(
         cascade = [CascadeType.ALL],
         orphanRemoval = true
     )
-    var images: List<ChatMessageImageEntity> = emptyList()
+    var attachedFiles: List<ChatMessageFileEntity> = emptyList()
 )

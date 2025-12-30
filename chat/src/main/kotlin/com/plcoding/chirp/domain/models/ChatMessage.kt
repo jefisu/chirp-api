@@ -10,5 +10,5 @@ data class ChatMessage(
     val sender: ChatParticipant,
     val content: String?,
     val createdAt: Instant,
-    val imageUrls: List<String> = emptyList()
+    val attachedFiles: List<ChatMessageFile> = emptyList()
 )

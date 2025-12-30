@@ -1,7 +1,5 @@
 package com.plcoding.chirp.service
 
-import com.plcoding.chirp.api.dto.ChatMessageDto
-import com.plcoding.chirp.api.mappers.toChatMessageDto
 import com.plcoding.chirp.domain.event.MessageDeletedEvent
 import com.plcoding.chirp.domain.events.chat.ChatEvent
 import com.plcoding.chirp.domain.exception.ChatNotFoundException
@@ -10,11 +8,12 @@ import com.plcoding.chirp.domain.exception.ForbiddenException
 import com.plcoding.chirp.domain.exception.InvalidMessageException
 import com.plcoding.chirp.domain.exception.MessageNotFoundException
 import com.plcoding.chirp.domain.models.ChatMessage
+import com.plcoding.chirp.domain.models.ChatMessageFile
 import com.plcoding.chirp.domain.type.ChatId
 import com.plcoding.chirp.domain.type.ChatMessageId
 import com.plcoding.chirp.domain.type.UserId
 import com.plcoding.chirp.infra.database.entities.ChatMessageEntity
-import com.plcoding.chirp.infra.database.entities.ChatMessageImageEntity
+import com.plcoding.chirp.infra.database.entities.ChatMessageFileEntity
 import com.plcoding.chirp.infra.database.mappers.toChatMessage
 import com.plcoding.chirp.infra.database.repositories.ChatMessageRepository
 import com.plcoding.chirp.infra.database.repositories.ChatParticipantRepository
@@ -22,13 +21,10 @@ import com.plcoding.chirp.infra.database.repositories.ChatRepository
 import com.plcoding.chirp.infra.message_queue.EventPublisher
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.context.ApplicationEventPublisher
-import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.Instant
-import java.util.UUID
 
 @Service
 class ChatMessageService(
@@ -47,29 +43,34 @@ class ChatMessageService(
     )
     fun sendMessage(
         chatId: ChatId,
+        messageId: ChatMessageId,
         senderId: UserId,
         content: String?,
-        imageUrls: List<String> = emptyList(),
-        messageId: ChatMessageId? = null
+        attachedFiles: List<ChatMessageFile> = emptyList()
     ): ChatMessage {
         val chat = chatRepository.findChatById(chatId, senderId)
             ?: throw ChatNotFoundException()
         val sender = chatParticipantRepository.findByIdOrNull(senderId)
             ?: throw ChatParticipantNotFoundException(senderId)
 
-        if (content.isNullOrBlank() && imageUrls.isEmpty()) {
+        if (content.isNullOrBlank() && attachedFiles.isEmpty()) {
             throw InvalidMessageException()
         }
 
         val messageEntity = ChatMessageEntity(
-            id = messageId ?: UUID.randomUUID(),
+            id = messageId,
             content = content?.trim(),
             chatId = chatId,
             chat = chat,
             sender = sender
         ).apply {
-            images = imageUrls.map { url ->
-                ChatMessageImageEntity(url = url, message = this)
+            this.attachedFiles = attachedFiles.map {
+                ChatMessageFileEntity(
+                    url = it.url,
+                    type = it.type,
+                    createdAt = createdAt,
+                    message = this
+                )
             }
         }
 
@@ -96,7 +97,7 @@ class ChatMessageService(
         val message = chatMessageRepository.findByIdOrNull(messageId)
             ?: throw MessageNotFoundException(messageId)
 
-        if(message.sender.userId != requestUserId) {
+        if (message.sender.userId != requestUserId) {
             throw ForbiddenException()
         }
 

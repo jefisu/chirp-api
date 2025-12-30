@@ -1,7 +1,7 @@
 package com.plcoding.chirp.service
 
-import com.plcoding.chirp.api.dto.ChatImageUploadDto
-import com.plcoding.chirp.api.dto.ChatImageUploadRequest
+import com.plcoding.chirp.api.dto.ChatFileUploadDto
+import com.plcoding.chirp.api.dto.ChatFileUploadRequest
 import com.plcoding.chirp.domain.exception.ChatNotFoundException
 import com.plcoding.chirp.domain.type.ChatId
 import com.plcoding.chirp.domain.type.UserId
@@ -11,7 +11,7 @@ import com.plcoding.chirp.infra.storage.SupabaseStorageService
 import org.springframework.stereotype.Service
 
 @Service
-class ChatImageService(
+class ChatMessageFileService(
     private val supabaseStorageService: SupabaseStorageService,
     private val chatRepository: ChatRepository
 ) {
@@ -19,8 +19,8 @@ class ChatImageService(
     fun generateUploadCredentials(
         userId: UserId,
         chatId: ChatId,
-        requests: List<ChatImageUploadRequest>
-    ): List<ChatImageUploadDto> {
+        requests: List<ChatFileUploadRequest>
+    ): List<ChatFileUploadDto> {
         chatRepository.findChatById(chatId, userId)
             ?: throw ChatNotFoundException()
 
@@ -30,7 +30,7 @@ class ChatImageService(
                 mimeType = request.mimeType,
                 destination = StorageDestination.ChatImage(chatId)
             )
-            ChatImageUploadDto(
+            ChatFileUploadDto(
                 fileName = request.fileName,
                 uploadUrl = credentials.uploadUrl,
                 publicUrl = credentials.publicUrl,

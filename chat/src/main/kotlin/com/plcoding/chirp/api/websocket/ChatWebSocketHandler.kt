@@ -17,12 +17,12 @@ import com.plcoding.chirp.domain.event.ChatParticipantLeftEvent
 import com.plcoding.chirp.domain.event.ChatParticipantsJoinedEvent
 import com.plcoding.chirp.domain.event.MessageDeletedEvent
 import com.plcoding.chirp.domain.event.ProfilePictureUpdatedEvent
+import com.plcoding.chirp.domain.models.ChatMessageFile
 import com.plcoding.chirp.domain.type.ChatId
 import com.plcoding.chirp.domain.type.UserId
 import com.plcoding.chirp.service.ChatMessageService
 import com.plcoding.chirp.service.ChatService
 import com.plcoding.chirp.service.JwtService
-import jakarta.websocket.CloseReason
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.scheduling.annotation.Scheduled
@@ -35,6 +35,8 @@ import org.springframework.web.socket.PongMessage
 import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.TextWebSocketHandler
+import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
@@ -408,12 +410,21 @@ class ChatWebSocketHandler(
             return
         }
 
+        val messageId = dto.messageId ?: UUID.randomUUID()
         val savedMessage = chatMessageService.sendMessage(
             chatId = dto.chatId,
             senderId = senderId,
             content = dto.content,
-            imageUrls = dto.imageUrls,
-            messageId = dto.messageId
+            messageId = messageId,
+            attachedFiles = dto.attachedFiles.map {
+                ChatMessageFile(
+                    id = it.id ?: UUID.randomUUID(),
+                    messageId = messageId,
+                    url = it.url,
+                    type = it.type,
+                    createdAt = Instant.now()
+                )
+            }
         )
 
         broadcastToChat(
