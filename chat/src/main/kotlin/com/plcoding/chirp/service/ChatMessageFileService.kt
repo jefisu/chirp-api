@@ -3,6 +3,7 @@ package com.plcoding.chirp.service
 import com.plcoding.chirp.api.dto.ChatFileUploadDto
 import com.plcoding.chirp.api.dto.ChatFileUploadRequest
 import com.plcoding.chirp.domain.exception.ChatNotFoundException
+import com.plcoding.chirp.domain.exception.TooManyAttachmentsException
 import com.plcoding.chirp.domain.type.ChatId
 import com.plcoding.chirp.domain.type.UserId
 import com.plcoding.chirp.infra.database.repositories.ChatRepository
@@ -23,6 +24,10 @@ class ChatMessageFileService(
     ): List<ChatFileUploadDto> {
         chatRepository.findChatById(chatId, userId)
             ?: throw ChatNotFoundException()
+
+        if (requests.size > 10) {
+            throw TooManyAttachmentsException(10)
+        }
 
         return requests.map { request ->
             val credentials = supabaseStorageService.generateSignedUploadUrl(

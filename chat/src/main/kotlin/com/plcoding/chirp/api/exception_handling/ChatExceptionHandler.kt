@@ -7,6 +7,7 @@ import com.plcoding.chirp.domain.exception.InvalidMessageException
 import com.plcoding.chirp.domain.exception.InvalidProfilePictureException
 import com.plcoding.chirp.domain.exception.MessageNotFoundException
 import com.plcoding.chirp.domain.exception.StorageException
+import com.plcoding.chirp.domain.exception.TooManyAttachmentsException
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseStatus
@@ -47,8 +48,15 @@ class ChatExceptionHandler {
 
     @ExceptionHandler(InvalidMessageException::class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    fun onInvalidMessage(e: StorageException) = mapOf(
+    fun onInvalidMessage(e: InvalidMessageException) = mapOf(
         "code" to "INVALID_MESSAGE_ERROR",
+        "message" to e.message
+    )
+
+    @ExceptionHandler(TooManyAttachmentsException::class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    fun onTooManyAttachments(e: TooManyAttachmentsException) = mapOf(
+        "code" to "TOO_MANY_ATTACHMENTS",
         "message" to e.message
     )
 }

@@ -7,6 +7,7 @@ import com.plcoding.chirp.domain.exception.ChatParticipantNotFoundException
 import com.plcoding.chirp.domain.exception.ForbiddenException
 import com.plcoding.chirp.domain.exception.InvalidMessageException
 import com.plcoding.chirp.domain.exception.MessageNotFoundException
+import com.plcoding.chirp.domain.exception.TooManyAttachmentsException
 import com.plcoding.chirp.domain.models.ChatMessage
 import com.plcoding.chirp.domain.models.ChatMessageFile
 import com.plcoding.chirp.domain.type.ChatId
@@ -55,6 +56,10 @@ class ChatMessageService(
 
         if (content.isNullOrBlank() && attachedFiles.isEmpty()) {
             throw InvalidMessageException()
+        }
+
+        if (attachedFiles.size > 10) {
+            throw TooManyAttachmentsException(10)
         }
 
         val messageEntity = ChatMessageEntity(
