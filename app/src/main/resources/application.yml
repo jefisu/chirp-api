@@ -27,7 +27,7 @@ spring:
       validation-timeout: 5000
       pool-name: SpringBootHikariCP
       data-source-properties:
-        prepareThreshold: 5
+        prepareThreshold: 0
         preparedStatementCacheQueries: 256
         preparedStatementCacheSizeMiB: 5
 
