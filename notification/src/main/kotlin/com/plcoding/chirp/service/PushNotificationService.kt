@@ -92,6 +92,11 @@ class PushNotificationService(
             .filter { it.userId != senderUserId }
             .map { it.toDeviceToken() }
 
+        if(recipients.isEmpty()) {
+            logger.info("No recipients left for chat $chatId after filtering sender $senderUserId")
+            return
+        }
+
         val notification = PushNotification(
             title = "New message from $senderUsername",
             recipients = recipients,
@@ -103,6 +108,7 @@ class PushNotificationService(
             )
         )
 
+        logger.info("Sending notification to ${recipients.size} devices")
         sendWithRetry(notification = notification)
     }
 
