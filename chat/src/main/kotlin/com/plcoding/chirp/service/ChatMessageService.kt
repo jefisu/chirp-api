@@ -20,6 +20,7 @@ import com.plcoding.chirp.infra.database.repositories.ChatMessageRepository
 import com.plcoding.chirp.infra.database.repositories.ChatParticipantRepository
 import com.plcoding.chirp.infra.database.repositories.ChatRepository
 import com.plcoding.chirp.infra.message_queue.EventPublisher
+import com.plcoding.chirp.infra.storage.SupabaseStorageService
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.repository.findByIdOrNull
@@ -34,7 +35,8 @@ class ChatMessageService(
     private val chatParticipantRepository: ChatParticipantRepository,
     private val applicationEventPublisher: ApplicationEventPublisher,
     private val eventPublisher: EventPublisher,
-    private val messageCacheManager: MessageCacheManager
+    private val messageCacheManager: MessageCacheManager,
+    private val supabaseStorageService: SupabaseStorageService
 ) {
 
     @Transactional
@@ -104,6 +106,10 @@ class ChatMessageService(
 
         if (message.sender.userId != requestUserId) {
             throw ForbiddenException()
+        }
+
+        message.attachedFiles.forEach { file ->
+            supabaseStorageService.deleteFile(file.url)
         }
 
         chatMessageRepository.delete(message)
