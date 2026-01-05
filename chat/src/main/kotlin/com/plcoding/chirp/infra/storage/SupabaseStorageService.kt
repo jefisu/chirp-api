@@ -6,6 +6,8 @@ import com.plcoding.chirp.domain.exception.InvalidProfilePictureException
 import com.plcoding.chirp.domain.exception.StorageException
 import com.plcoding.chirp.domain.models.FileUploadCredentials
 import com.plcoding.chirp.domain.type.UserId
+import com.plcoding.chirp.infra.storage.StorageDestination.ChatImage
+import com.plcoding.chirp.infra.storage.StorageDestination.ProfilePicture
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestClient
@@ -74,6 +76,37 @@ class SupabaseStorageService(
         }
     }
 
+    fun listFiles(
+        bucket: String,
+        path: String? = null,
+        offset: Int = 0,
+        limit: Int = 100
+    ): List<StorageObject> {
+        val searchPath = path ?: ""
+        val json = mapOf(
+            "prefix" to searchPath,
+            "limit" to limit,
+            "offset" to offset,
+            "sortBy" to mapOf(
+                "column" to "name",
+                "order" to "asc"
+            )
+        )
+
+        return supabaseRestClient
+            .post()
+            .uri("/storage/v1/object/list/$bucket")
+            .header("Content-Type", "application/json")
+            .body(json)
+            .retrieve()
+            .body(Array<StorageObject>::class.java)
+            ?.toList() ?: emptyList()
+    }
+
+    fun getPublicUrl(bucket: String, path: String): String {
+        return "$supabaseUrl/storage/v1/object/public/$bucket/$path"
+    }
+
     private fun createSignedUrl(
         path: String,
         expiresInSeconds: Int
@@ -97,5 +130,14 @@ class SupabaseStorageService(
     private data class SignedUploadResponse @JsonCreator constructor(
         @JsonProperty("url")
         val url: String
+    )
+
+    data class StorageObject(
+        val name: String,
+        val id: String?,
+        val metadata: Map<String, Any>?,
+        @JsonProperty("created_at") val createdAt: String?,
+        @JsonProperty("updated_at") val updatedAt: String?,
+        @JsonProperty("last_accessed_at") val lastAccessedAt: String?
     )
 }
