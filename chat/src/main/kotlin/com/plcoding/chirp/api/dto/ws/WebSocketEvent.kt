@@ -1,7 +1,8 @@
 package com.plcoding.chirp.api.dto.ws
 
 enum class IncomingWebSocketMessageType {
-    NEW_MESSAGE
+    NEW_MESSAGE,
+    TYPING_EVENT
 }
 
 enum class OutgoingWebSocketMessageType {
@@ -9,6 +10,7 @@ enum class OutgoingWebSocketMessageType {
     MESSAGE_DELETED,
     PROFILE_PICTURE_UPDATED,
     CHAT_PARTICIPANTS_CHANGED,
+    TYPING_EVENT,
     ERROR
 }
 

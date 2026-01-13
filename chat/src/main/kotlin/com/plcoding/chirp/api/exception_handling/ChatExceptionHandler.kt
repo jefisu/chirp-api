@@ -8,10 +8,13 @@ import com.plcoding.chirp.domain.exception.InvalidProfilePictureException
 import com.plcoding.chirp.domain.exception.MessageNotFoundException
 import com.plcoding.chirp.domain.exception.StorageException
 import com.plcoding.chirp.domain.exception.TooManyAttachmentsException
+import com.plcoding.chirp.domain.exception.UserNotInChatException
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestControllerAdvice
 
+@RestControllerAdvice
 class ChatExceptionHandler {
 
     @ExceptionHandler(
@@ -20,14 +23,14 @@ class ChatExceptionHandler {
         ChatParticipantNotFoundException::class,
     )
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    fun onForbidden(e: Exception) = mapOf(
+    fun onNotFound(e: Exception) = mapOf(
         "code" to "NOT_FOUND",
         "message" to e.message
     )
 
     @ExceptionHandler(InvalidChatSizeException::class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    fun onForbidden(e: InvalidChatSizeException) = mapOf(
+    fun onInvalidChatSize(e: InvalidChatSizeException) = mapOf(
         "code" to "INVALID_CHAT_SIZE",
         "message" to e.message
     )
@@ -41,7 +44,7 @@ class ChatExceptionHandler {
 
     @ExceptionHandler(StorageException::class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    fun onInvalidProfilePicture(e: StorageException) = mapOf(
+    fun onStorageError(e: StorageException) = mapOf(
         "code" to "STORAGE_ERROR",
         "message" to e.message
     )
@@ -57,6 +60,13 @@ class ChatExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     fun onTooManyAttachments(e: TooManyAttachmentsException) = mapOf(
         "code" to "TOO_MANY_ATTACHMENTS",
+        "message" to e.message
+    )
+
+    @ExceptionHandler(UserNotInChatException::class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    fun onUserNotInChat(e: UserNotInChatException) = mapOf(
+        "code" to "USER_NOT_IN_CHAT",
         "message" to e.message
     )
 }

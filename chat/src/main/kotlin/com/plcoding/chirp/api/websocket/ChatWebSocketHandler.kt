@@ -1,16 +1,17 @@
 package com.plcoding.chirp.api.websocket
 
-import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.plcoding.chirp.api.dto.ws.ChatParticipantsChangedDto
 import com.plcoding.chirp.api.dto.ws.DeleteMessageDto
 import com.plcoding.chirp.api.dto.ws.ErrorDto
+import com.plcoding.chirp.api.dto.ws.IncomingTypingEventDto
 import com.plcoding.chirp.api.dto.ws.IncomingWebSocketMessage
 import com.plcoding.chirp.api.dto.ws.IncomingWebSocketMessageType
 import com.plcoding.chirp.api.dto.ws.OutgoingWebSocketMessage
 import com.plcoding.chirp.api.dto.ws.OutgoingWebSocketMessageType
 import com.plcoding.chirp.api.dto.ws.ProfilePictureUpdateDto
 import com.plcoding.chirp.api.dto.ws.SendMessageDto
+import com.plcoding.chirp.api.dto.ws.OutcomingTypingEventDto
 import com.plcoding.chirp.api.mappers.toChatMessageDto
 import com.plcoding.chirp.domain.event.ChatCreatedEvent
 import com.plcoding.chirp.domain.event.ChatParticipantLeftEvent
@@ -21,8 +22,10 @@ import com.plcoding.chirp.domain.models.ChatMessageFile
 import com.plcoding.chirp.domain.type.ChatId
 import com.plcoding.chirp.domain.type.UserId
 import com.plcoding.chirp.service.ChatMessageService
+import com.plcoding.chirp.service.ChatParticipantService
 import com.plcoding.chirp.service.ChatService
 import com.plcoding.chirp.service.JwtService
+import com.plcoding.chirp.service.TypingService
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.scheduling.annotation.Scheduled
@@ -47,8 +50,10 @@ class ChatWebSocketHandler(
     private val chatMessageService: ChatMessageService,
     private val objectMapper: ObjectMapper,
     private val chatService: ChatService,
-    private val jwtService: JwtService
-): TextWebSocketHandler() {
+    private val jwtService: JwtService,
+    private val typingService: TypingService,
+    private val chatParticipantService: ChatParticipantService
+) : TextWebSocketHandler() {
 
     companion object {
         private const val PING_INTERVAL_MS = 30_000L
@@ -126,6 +131,7 @@ class ChatWebSocketHandler(
                             ?.apply { remove(session.id) }
                             ?.takeIf { it.isNotEmpty() }
                     }
+                    typingService.clearTypingStatus(chatId, userId)
                 }
 
                 logger.info("Websocket session closed for user $userId")
@@ -150,7 +156,7 @@ class ChatWebSocketHandler(
                 message.payload,
                 IncomingWebSocketMessage::class.java
             )
-            when(webSocketMessage.type) {
+            when (webSocketMessage.type) {
                 IncomingWebSocketMessageType.NEW_MESSAGE -> {
                     val dto = objectMapper.readValue(
                         webSocketMessage.payload,
@@ -162,8 +168,16 @@ class ChatWebSocketHandler(
                         senderId = userSession.userId
                     )
                 }
+
+                IncomingWebSocketMessageType.TYPING_EVENT -> {
+                    val dto = objectMapper.readValue(
+                        webSocketMessage.payload,
+                        IncomingTypingEventDto::class.java
+                    )
+                    handleTypingEvent(dto, userSession.userId)
+                }
             }
-        } catch(e: JsonMappingException) {
+        } catch (e: Exception) {
             logger.warn("Could not parse message ${message.payload}", e)
             sendError(
                 session = userSession.session,
@@ -242,9 +256,9 @@ class ChatWebSocketHandler(
 
         sessionsSnapshot.forEach { (sessionId, userSession) ->
             try {
-                if(userSession.session.isOpen) {
+                if (userSession.session.isOpen) {
                     val lastPong = userSession.lastPongTimestamp
-                    if(currentTime - lastPong > PONG_TIMEOUT_MS) {
+                    if (currentTime - lastPong > PONG_TIMEOUT_MS) {
                         logger.warn("Session $sessionId has timed out, closing connection.")
                         sessionsToClose.add(sessionId)
                         return@forEach
@@ -253,7 +267,7 @@ class ChatWebSocketHandler(
                     userSession.session.sendMessage(PingMessage())
                     logger.debug("Sent ping to {}", userSession.userId)
                 }
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 logger.error("Could not ping session $sessionId", e)
                 sessionsToClose.add(sessionId)
             }
@@ -264,7 +278,7 @@ class ChatWebSocketHandler(
                 sessions[sessionId]?.session?.let { session ->
                     try {
                         session.close(CloseStatus.GOING_AWAY.withReason("Ping timeout"))
-                    } catch(e: Exception) {
+                    } catch (e: Exception) {
                         logger.error("Couldn't close sessions for session ${session.id}")
                     }
                 }
@@ -334,10 +348,10 @@ class ChatWebSocketHandler(
                 sessions[sessionId]
             } ?: return@forEach
             try {
-                if(userSession.session.isOpen) {
+                if (userSession.session.isOpen) {
                     userSession.session.sendMessage(TextMessage(messageJson))
                 }
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 logger.error("Could not send profile picture update to session $sessionId", e)
             }
         }
@@ -375,14 +389,15 @@ class ChatWebSocketHandler(
 
         try {
             session.sendMessage(TextMessage(webSocketMessage))
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             logger.warn("Couldn't send error message", e)
         }
     }
 
     private fun broadcastToChat(
         chatId: ChatId,
-        message: OutgoingWebSocketMessage
+        message: OutgoingWebSocketMessage,
+        excludeUserId: UserId? = null
     ) {
         val chatSessions = connectionLock.read {
             chatToSessions[chatId]?.toList() ?: emptyList()
@@ -392,6 +407,8 @@ class ChatWebSocketHandler(
             val userSession = connectionLock.read {
                 sessions[sessionId]
             } ?: return@forEach
+
+            if (userSession.userId == excludeUserId) return@forEach
 
             sendToUser(
                 userId = userSession.userId,
@@ -404,11 +421,28 @@ class ChatWebSocketHandler(
         dto: SendMessageDto,
         senderId: UserId
     ) {
-        val userChatIds = connectionLock.read { this@ChatWebSocketHandler.userChatIds[senderId] } ?: return
+        val userChatIds =
+            connectionLock.read { this@ChatWebSocketHandler.userChatIds[senderId] } ?: return
 
-        if(dto.chatId !in userChatIds) {
+        if (dto.chatId !in userChatIds) {
             return
         }
+
+        typingService.clearTypingStatus(dto.chatId, senderId)
+        broadcastToChat(
+            chatId = dto.chatId,
+            message = OutgoingWebSocketMessage(
+                type = OutgoingWebSocketMessageType.TYPING_EVENT,
+                payload = objectMapper.writeValueAsString(
+                    OutcomingTypingEventDto(
+                        chatId = dto.chatId,
+                        userId = senderId,
+                        userName = "",
+                        isTyping = false
+                    )
+                )
+            )
+        )
 
         val messageId = dto.messageId ?: UUID.randomUUID()
         val savedMessage = chatMessageService.sendMessage(
@@ -438,6 +472,31 @@ class ChatWebSocketHandler(
         )
     }
 
+    private fun handleTypingEvent(dto: IncomingTypingEventDto, senderId: UserId) {
+        val userChatIds =
+            connectionLock.read { this@ChatWebSocketHandler.userChatIds[senderId] } ?: return
+        if (dto.chatId !in userChatIds) return
+
+        val participant = chatParticipantService.findChatParticipantById(senderId)
+        val eventWithContext = OutcomingTypingEventDto(
+            chatId = dto.chatId,
+            userId = senderId,
+            userName = participant?.username ?: "User",
+            isTyping = dto.isTyping
+        )
+
+        typingService.processTypingEvent(eventWithContext)
+
+        broadcastToChat(
+            chatId = dto.chatId,
+            message = OutgoingWebSocketMessage(
+                type = OutgoingWebSocketMessageType.TYPING_EVENT,
+                payload = objectMapper.writeValueAsString(eventWithContext)
+            ),
+            excludeUserId = senderId
+        )
+    }
+
     private fun sendToUser(userId: UserId, message: OutgoingWebSocketMessage) {
         val userSessions = connectionLock.read {
             userToSessions[userId] ?: emptySet()
@@ -446,12 +505,12 @@ class ChatWebSocketHandler(
             val userSession = connectionLock.read {
                 sessions[sessionId] ?: return@forEach
             }
-            if(userSession.session.isOpen) {
+            if (userSession.session.isOpen) {
                 try {
                     val messageJson = objectMapper.writeValueAsString(message)
                     userSession.session.sendMessage(TextMessage(messageJson))
                     logger.debug("Sent message to user {}: {}", userId, messageJson)
-                } catch(e: Exception) {
+                } catch (e: Exception) {
                     logger.error("Error while sending message to $userId", e)
                 }
             }
