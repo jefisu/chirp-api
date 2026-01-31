@@ -1,0 +1,9 @@
+@chatId = your_chat_id_here
+
+### Get Chat History
+GET {{host}}/api/chat/{{chatId}}/history
+Authorization: Bearer {{authToken}}
+
+### Get Chat History (with pagination)
+GET {{host}}/api/chat/{{chatId}}/history?pageSize=10&before=2024-01-01T00:00:00Z
+Authorization: Bearer {{authToken}}

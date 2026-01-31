@@ -1,0 +1,6 @@
+@chatId = your_chat_id_here
+@userId = user_id_to_remove
+
+### Remove Participant (Admin only)
+DELETE {{host}}/api/chat/{{chatId}}/participants/{{userId}}
+Authorization: Bearer {{authToken}}

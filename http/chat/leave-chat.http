@@ -3,3 +3,7 @@
 ### Leave Chat
 DELETE {{host}}/api/chat/{{chatId}}/leave
 Authorization: Bearer {{authToken}}
+
+### Leave Chat with confirmation (if admin)
+DELETE {{host}}/api/chat/{{chatId}}/leave?confirmDelete=true
+Authorization: Bearer {{authToken}}
