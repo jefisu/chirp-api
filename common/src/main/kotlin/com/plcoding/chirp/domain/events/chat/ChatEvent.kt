@@ -21,4 +21,18 @@ sealed class ChatEvent(
         val message: String,
         override val eventKey: String = ChatEventConstants.CHAT_NEW_MESSAGE
     ): ChatEvent(), ChirpEvent
+
+    data class ParticipantRemoved(
+        val removedUserId: UserId,
+        val removedUsername: String,
+        val chatId: ChatId,
+        override val eventKey: String = ChatEventConstants.CHAT_PARTICIPANT_REMOVED
+    ): ChatEvent(), ChirpEvent
+
+    data class ParticipantAdded(
+        val addedUserId: UserId,
+        val addedUsername: String,
+        val chatId: ChatId,
+        override val eventKey: String = ChatEventConstants.CHAT_PARTICIPANT_ADDED
+    ): ChatEvent(), ChirpEvent
 }

@@ -2,11 +2,13 @@ package com.plcoding.chirp.api.controllers
 
 import com.plcoding.chirp.api.dto.AddParticipantToChatDto
 import com.plcoding.chirp.api.dto.ChatDto
+import com.plcoding.chirp.api.dto.ChatHistoryItemDto
 import com.plcoding.chirp.api.dto.ChatMessageDto
 import com.plcoding.chirp.api.dto.CreateChatRequest
 import com.plcoding.chirp.api.mappers.toChatDto
 import com.plcoding.chirp.api.util.requestUserId
 import com.plcoding.chirp.domain.type.ChatId
+import com.plcoding.chirp.domain.type.UserId
 import com.plcoding.chirp.service.ChatService
 import com.plcoding.chirp.service.TypingService
 import jakarta.validation.Valid
@@ -87,11 +89,38 @@ class ChatController(
 
     @DeleteMapping("/{chatId}/leave")
     fun leaveChat(
-        @PathVariable chatId: ChatId
+        @PathVariable chatId: ChatId,
+        @RequestParam("confirmDelete", required = false) confirmDelete: Boolean = false
     ) {
-        chatService.removeParticipantFromChat(
+        chatService.leaveChat(
             chatId = chatId,
-            userId = requestUserId
+            userId = requestUserId,
+            confirmDelete = confirmDelete
+        )
+    }
+
+    @DeleteMapping("/{chatId}/participants/{userId}")
+    fun removeParticipant(
+        @PathVariable chatId: ChatId,
+        @PathVariable userId: UserId
+    ) {
+        chatService.removeParticipantByAdmin(
+            chatId = chatId,
+            adminUserId = requestUserId,
+            targetUserId = userId
+        )
+    }
+
+    @GetMapping("/{chatId}/history")
+    fun getChatHistory(
+        @PathVariable("chatId") chatId: ChatId,
+        @RequestParam("before", required = false) before: Instant? = null,
+        @RequestParam("pageSize", required = false) pageSize: Int = DEFAULT_PAGE_SIZE
+    ): List<ChatHistoryItemDto> {
+        return chatService.getChatHistory(
+            chatId = chatId,
+            before = before,
+            pageSize = pageSize
         )
     }
 }

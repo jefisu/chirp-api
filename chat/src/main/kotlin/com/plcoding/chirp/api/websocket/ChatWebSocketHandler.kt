@@ -1,23 +1,30 @@
 package com.plcoding.chirp.api.websocket
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.plcoding.chirp.api.dto.ws.ChatDeletedDto
+import com.plcoding.chirp.api.dto.ws.ChatEventNotificationDto
 import com.plcoding.chirp.api.dto.ws.ChatParticipantsChangedDto
 import com.plcoding.chirp.api.dto.ws.DeleteMessageDto
 import com.plcoding.chirp.api.dto.ws.ErrorDto
 import com.plcoding.chirp.api.dto.ws.IncomingTypingEventDto
 import com.plcoding.chirp.api.dto.ws.IncomingWebSocketMessage
 import com.plcoding.chirp.api.dto.ws.IncomingWebSocketMessageType
+import com.plcoding.chirp.api.dto.ws.OutcomingTypingEventDto
 import com.plcoding.chirp.api.dto.ws.OutgoingWebSocketMessage
 import com.plcoding.chirp.api.dto.ws.OutgoingWebSocketMessageType
 import com.plcoding.chirp.api.dto.ws.ProfilePictureUpdateDto
+import com.plcoding.chirp.api.dto.ws.RemovedFromChatDto
 import com.plcoding.chirp.api.dto.ws.SendMessageDto
-import com.plcoding.chirp.api.dto.ws.OutcomingTypingEventDto
 import com.plcoding.chirp.api.mappers.toChatMessageDto
 import com.plcoding.chirp.domain.event.ChatCreatedEvent
+import com.plcoding.chirp.domain.event.ChatDeletedByAdminEvent
 import com.plcoding.chirp.domain.event.ChatParticipantLeftEvent
 import com.plcoding.chirp.domain.event.ChatParticipantsJoinedEvent
 import com.plcoding.chirp.domain.event.MessageDeletedEvent
+import com.plcoding.chirp.domain.event.ParticipantAddedEvent
+import com.plcoding.chirp.domain.event.ParticipantRemovedByAdminEvent
 import com.plcoding.chirp.domain.event.ProfilePictureUpdatedEvent
+import com.plcoding.chirp.domain.models.ChatEventType
 import com.plcoding.chirp.domain.models.ChatMessageFile
 import com.plcoding.chirp.domain.type.ChatId
 import com.plcoding.chirp.domain.type.UserId
@@ -374,6 +381,101 @@ class ChatWebSocketHandler(
                 }
             }
         }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    fun onParticipantRemovedByAdmin(event: ParticipantRemovedByAdminEvent) {
+        connectionLock.write {
+            userChatIds.compute(event.removedUserId) { _, chatIds ->
+                chatIds
+                    ?.apply { remove(event.chatId) }
+                    ?.takeIf { it.isNotEmpty() }
+            }
+
+            userToSessions[event.removedUserId]?.forEach { sessionId ->
+                chatToSessions.compute(event.chatId) { _, sessions ->
+                    sessions
+                        ?.apply { remove(sessionId) }
+                        ?.takeIf { it.isNotEmpty() }
+                }
+            }
+        }
+
+        sendToUser(
+            userId = event.removedUserId,
+            message = OutgoingWebSocketMessage(
+                type = OutgoingWebSocketMessageType.REMOVED_FROM_CHAT,
+                payload = objectMapper.writeValueAsString(
+                    RemovedFromChatDto(chatId = event.chatId)
+                )
+            )
+        )
+
+        broadcastToChat(
+            chatId = event.chatId,
+            message = OutgoingWebSocketMessage(
+                type = OutgoingWebSocketMessageType.CHAT_EVENT,
+                payload = objectMapper.writeValueAsString(
+                    ChatEventNotificationDto(
+                        chatId = event.chatId,
+                        eventId = event.eventId,
+                        eventType = ChatEventType.PARTICIPANT_REMOVED,
+                        actorUserId = event.adminUserId,
+                        actorUsername = event.adminUsername,
+                        targetUserId = event.removedUserId,
+                        targetUsername = event.removedUsername,
+                        createdAt = event.createdAt
+                    )
+                )
+            )
+        )
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    fun onChatDeletedByAdmin(event: ChatDeletedByAdminEvent) {
+        event.memberUserIds.forEach { userId ->
+            sendToUser(
+                userId = userId,
+                message = OutgoingWebSocketMessage(
+                    type = OutgoingWebSocketMessageType.CHAT_DELETED,
+                    payload = objectMapper.writeValueAsString(
+                        ChatDeletedDto(
+                            chatId = event.chatId,
+                            deletedByUserId = event.adminUserId
+                        )
+                    )
+                )
+            )
+        }
+
+        connectionLock.write {
+            chatToSessions.remove(event.chatId)
+            event.memberUserIds.forEach { userId ->
+                userChatIds[userId]?.remove(event.chatId)
+            }
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    fun onParticipantAdded(event: ParticipantAddedEvent) {
+        broadcastToChat(
+            chatId = event.chatId,
+            message = OutgoingWebSocketMessage(
+                type = OutgoingWebSocketMessageType.CHAT_EVENT,
+                payload = objectMapper.writeValueAsString(
+                    ChatEventNotificationDto(
+                        chatId = event.chatId,
+                        eventId = event.eventId,
+                        eventType = ChatEventType.PARTICIPANT_ADDED,
+                        actorUserId = event.addedByUserId,
+                        actorUsername = event.addedByUsername,
+                        targetUserId = event.addedUserId,
+                        targetUsername = event.addedUsername,
+                        createdAt = event.createdAt
+                    )
+                )
+            )
+        )
     }
 
     private fun sendError(

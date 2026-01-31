@@ -1,24 +1,38 @@
 package com.plcoding.chirp.service
 
+import com.plcoding.chirp.api.dto.ChatEventDto
+import com.plcoding.chirp.api.dto.ChatHistoryItemDto
 import com.plcoding.chirp.api.dto.ChatMessageDto
 import com.plcoding.chirp.api.mappers.toChatMessageDto
 import com.plcoding.chirp.domain.event.ChatCreatedEvent
+import com.plcoding.chirp.domain.event.ChatDeletedByAdminEvent
 import com.plcoding.chirp.domain.event.ChatParticipantLeftEvent
 import com.plcoding.chirp.domain.event.ChatParticipantsJoinedEvent
+import com.plcoding.chirp.domain.event.ParticipantAddedEvent
+import com.plcoding.chirp.domain.event.ParticipantRemovedByAdminEvent
+import com.plcoding.chirp.domain.events.chat.ChatEvent
+import com.plcoding.chirp.domain.exception.AdminLeaveRequiresConfirmationException
+import com.plcoding.chirp.domain.exception.CannotRemoveSelfException
 import com.plcoding.chirp.domain.exception.ChatNotFoundException
 import com.plcoding.chirp.domain.exception.ChatParticipantNotFoundException
 import com.plcoding.chirp.domain.exception.ForbiddenException
 import com.plcoding.chirp.domain.exception.InvalidChatSizeException
+import com.plcoding.chirp.domain.exception.NotChatAdminException
 import com.plcoding.chirp.domain.models.Chat
+import com.plcoding.chirp.domain.models.ChatEventType
 import com.plcoding.chirp.domain.models.ChatMessage
 import com.plcoding.chirp.domain.type.ChatId
 import com.plcoding.chirp.infra.database.entities.ChatEntity
+import com.plcoding.chirp.infra.database.entities.ChatEventEntity
 import com.plcoding.chirp.infra.database.mappers.toChat
+import com.plcoding.chirp.infra.database.mappers.toChatEventDto
+import com.plcoding.chirp.infra.database.repositories.ChatEventRepository
 import com.plcoding.chirp.infra.database.repositories.ChatParticipantRepository
 import com.plcoding.chirp.infra.database.repositories.ChatRepository
 import com.plcoding.chirp.domain.type.UserId
 import com.plcoding.chirp.infra.database.mappers.toChatMessage
 import com.plcoding.chirp.infra.database.repositories.ChatMessageRepository
+import com.plcoding.chirp.infra.message_queue.EventPublisher
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.PageRequest
@@ -32,7 +46,9 @@ class ChatService(
     private val chatRepository: ChatRepository,
     private val chatParticipantRepository: ChatParticipantRepository,
     private val chatMessageRepository: ChatMessageRepository,
+    private val chatEventRepository: ChatEventRepository,
     private val applicationEventPublisher: ApplicationEventPublisher,
+    private val eventPublisher: EventPublisher,
 ) {
 
     @Cacheable(
@@ -121,12 +137,8 @@ class ChatService(
         val chat = chatRepository.findByIdOrNull(chatId)
             ?: throw ChatNotFoundException()
 
-        val isRequestingUserInChat = chat.participants.any {
-            it.userId == requestUserId
-        }
-        if(!isRequestingUserInChat) {
-            throw ForbiddenException()
-        }
+        val addedByParticipant = chat.participants.find { it.userId == requestUserId }
+            ?: throw ForbiddenException()
 
         val users = userIds.map { userId ->
             chatParticipantRepository.findByIdOrNull(userId)
@@ -146,6 +158,37 @@ class ChatService(
                 userIds = userIds
             )
         )
+
+        users.forEach { addedUser ->
+            val event = chatEventRepository.save(
+                ChatEventEntity(
+                    chatId = chatId,
+                    eventType = ChatEventType.PARTICIPANT_ADDED,
+                    actor = addedByParticipant,
+                    targetUser = addedUser
+                )
+            )
+
+            applicationEventPublisher.publishEvent(
+                ParticipantAddedEvent(
+                    chatId = chatId,
+                    addedByUserId = requestUserId,
+                    addedByUsername = addedByParticipant.username,
+                    addedUserId = addedUser.userId,
+                    addedUsername = addedUser.username,
+                    eventId = event.id!!,
+                    createdAt = event.createdAt
+                )
+            )
+
+            eventPublisher.publish(
+                ChatEvent.ParticipantAdded(
+                    addedUserId = addedUser.userId,
+                    addedUsername = addedUser.username,
+                    chatId = chatId
+                )
+            )
+        }
 
         return updatedChat
     }
@@ -185,5 +228,138 @@ class ChatService(
             .findLatestMessagesByChatIds(setOf(chatId))
             .firstOrNull()
             ?.toChatMessage()
+    }
+
+    @Transactional
+    fun removeParticipantByAdmin(
+        chatId: ChatId,
+        adminUserId: UserId,
+        targetUserId: UserId
+    ) {
+        val chat = chatRepository.findByIdOrNull(chatId)
+            ?: throw ChatNotFoundException()
+
+        if (chat.creator.userId != adminUserId) {
+            throw NotChatAdminException()
+        }
+
+        if (adminUserId == targetUserId) {
+            throw CannotRemoveSelfException()
+        }
+
+        val targetParticipant = chat.participants.find { it.userId == targetUserId }
+            ?: throw ChatParticipantNotFoundException(targetUserId)
+
+        val adminParticipant = chat.participants.find { it.userId == adminUserId }
+            ?: throw ChatParticipantNotFoundException(adminUserId)
+
+        chatRepository.save(
+            chat.apply {
+                this.participants = chat.participants - targetParticipant
+            }
+        )
+
+        val event = chatEventRepository.save(
+            ChatEventEntity(
+                chatId = chatId,
+                eventType = ChatEventType.PARTICIPANT_REMOVED,
+                actor = adminParticipant,
+                targetUser = targetParticipant
+            )
+        )
+
+        applicationEventPublisher.publishEvent(
+            ParticipantRemovedByAdminEvent(
+                chatId = chatId,
+                adminUserId = adminUserId,
+                adminUsername = adminParticipant.username,
+                removedUserId = targetUserId,
+                removedUsername = targetParticipant.username,
+                eventId = event.id!!,
+                createdAt = event.createdAt
+            )
+        )
+
+        eventPublisher.publish(
+            ChatEvent.ParticipantRemoved(
+                removedUserId = targetUserId,
+                removedUsername = targetParticipant.username,
+                chatId = chatId
+            )
+        )
+    }
+
+    @Transactional
+    fun leaveChat(
+        chatId: ChatId,
+        userId: UserId,
+        confirmDelete: Boolean = false
+    ) {
+        val chat = chatRepository.findByIdOrNull(chatId)
+            ?: throw ChatNotFoundException()
+
+        val isAdmin = chat.creator.userId == userId
+
+        if (isAdmin) {
+            if (!confirmDelete) {
+                throw AdminLeaveRequiresConfirmationException()
+            }
+
+            val memberUserIds = chat.participants.map { it.userId }.toSet()
+            chatRepository.deleteById(chatId)
+            applicationEventPublisher.publishEvent(
+                ChatDeletedByAdminEvent(
+                    chatId = chatId,
+                    adminUserId = userId,
+                    memberUserIds = memberUserIds
+                )
+            )
+        } else {
+            removeParticipantFromChat(chatId, userId)
+        }
+    }
+
+    @Cacheable(
+        value = ["chat_history"],
+        key = "#chatId",
+        condition = "#before == null && #pageSize <= 50",
+        sync = true
+    )
+    fun getChatHistory(
+        chatId: ChatId,
+        before: Instant?,
+        pageSize: Int
+    ): List<ChatHistoryItemDto> {
+        val beforeTime = before ?: Instant.now()
+
+        val messages = chatMessageRepository.findByChatIdBefore(
+            chatId = chatId,
+            before = beforeTime,
+            pageable = PageRequest.of(0, pageSize)
+        ).content
+
+        val events = chatEventRepository.findByChatIdBefore(
+            chatId = chatId,
+            before = beforeTime,
+            pageable = PageRequest.of(0, pageSize)
+        ).content
+
+        val messageItems = messages.map {
+            ChatHistoryItemDto.Message(
+                message = it.toChatMessage().toChatMessageDto(),
+                createdAt = it.createdAt
+            )
+        }
+
+        val eventItems = events.map {
+            ChatHistoryItemDto.Event(
+                event = it.toChatEventDto(),
+                createdAt = it.createdAt
+            )
+        }
+
+        return (messageItems + eventItems)
+            .sortedByDescending { it.createdAt }
+            .take(pageSize)
     }
 }

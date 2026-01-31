@@ -1,11 +1,14 @@
 package com.plcoding.chirp.api.exception_handling
 
+import com.plcoding.chirp.domain.exception.AdminLeaveRequiresConfirmationException
+import com.plcoding.chirp.domain.exception.CannotRemoveSelfException
 import com.plcoding.chirp.domain.exception.ChatNotFoundException
 import com.plcoding.chirp.domain.exception.ChatParticipantNotFoundException
 import com.plcoding.chirp.domain.exception.InvalidChatSizeException
 import com.plcoding.chirp.domain.exception.InvalidMessageException
 import com.plcoding.chirp.domain.exception.InvalidProfilePictureException
 import com.plcoding.chirp.domain.exception.MessageNotFoundException
+import com.plcoding.chirp.domain.exception.NotChatAdminException
 import com.plcoding.chirp.domain.exception.StorageException
 import com.plcoding.chirp.domain.exception.TooManyAttachmentsException
 import com.plcoding.chirp.domain.exception.UserNotInChatException
@@ -67,6 +70,27 @@ class ChatExceptionHandler {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     fun onUserNotInChat(e: UserNotInChatException) = mapOf(
         "code" to "USER_NOT_IN_CHAT",
+        "message" to e.message
+    )
+
+    @ExceptionHandler(NotChatAdminException::class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    fun onNotChatAdmin(e: NotChatAdminException) = mapOf(
+        "code" to "NOT_CHAT_ADMIN",
+        "message" to e.message
+    )
+
+    @ExceptionHandler(AdminLeaveRequiresConfirmationException::class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    fun onAdminLeaveRequiresConfirmation(e: AdminLeaveRequiresConfirmationException) = mapOf(
+        "code" to "ADMIN_LEAVE_REQUIRES_CONFIRMATION",
+        "message" to e.message
+    )
+
+    @ExceptionHandler(CannotRemoveSelfException::class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    fun onCannotRemoveSelf(e: CannotRemoveSelfException) = mapOf(
+        "code" to "CANNOT_REMOVE_SELF",
         "message" to e.message
     )
 }

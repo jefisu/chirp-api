@@ -1,12 +1,9 @@
 package com.plcoding.chirp.infra.message_queue
 
 import com.plcoding.chirp.domain.events.chat.ChatEvent
-import com.plcoding.chirp.domain.events.user.UserEvent
-import com.plcoding.chirp.service.EmailService
 import com.plcoding.chirp.service.PushNotificationService
 import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.stereotype.Component
-import java.time.Duration
 
 @Component
 class NotificationChatEventListener(
@@ -22,6 +19,18 @@ class NotificationChatEventListener(
                     senderUserId = event.senderId,
                     senderUsername = event.senderUsername,
                     message = event.message,
+                    chatId = event.chatId
+                )
+            }
+            is ChatEvent.ParticipantRemoved -> {
+                pushNotificationService.sendRemovedFromChatNotification(
+                    recipientUserId = event.removedUserId,
+                    chatId = event.chatId
+                )
+            }
+            is ChatEvent.ParticipantAdded -> {
+                pushNotificationService.sendAddedToChatNotification(
+                    recipientUserId = event.addedUserId,
                     chatId = event.chatId
                 )
             }

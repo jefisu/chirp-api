@@ -112,6 +112,60 @@ class PushNotificationService(
         sendWithRetry(notification = notification)
     }
 
+    fun sendRemovedFromChatNotification(
+        recipientUserId: UserId,
+        chatId: ChatId
+    ) {
+        val deviceTokens = deviceTokenRepository.findByUserIdIn(listOf(recipientUserId))
+        if (deviceTokens.isEmpty()) {
+            logger.info("No device tokens found for removed user $recipientUserId")
+            return
+        }
+
+        val recipients = deviceTokens.map { it.toDeviceToken() }
+
+        val notification = PushNotification(
+            title = "Removed from chat",
+            recipients = recipients,
+            message = "You were removed from a chat",
+            chatId = chatId,
+            data = mapOf(
+                "chatId" to chatId.toString(),
+                "type" to "removed_from_chat"
+            )
+        )
+
+        logger.info("Sending removed from chat notification to user $recipientUserId")
+        sendWithRetry(notification = notification)
+    }
+
+    fun sendAddedToChatNotification(
+        recipientUserId: UserId,
+        chatId: ChatId
+    ) {
+        val deviceTokens = deviceTokenRepository.findByUserIdIn(listOf(recipientUserId))
+        if (deviceTokens.isEmpty()) {
+            logger.info("No device tokens found for added user $recipientUserId")
+            return
+        }
+
+        val recipients = deviceTokens.map { it.toDeviceToken() }
+
+        val notification = PushNotification(
+            title = "Added to chat",
+            recipients = recipients,
+            message = "You were added to a chat",
+            chatId = chatId,
+            data = mapOf(
+                "chatId" to chatId.toString(),
+                "type" to "added_to_chat"
+            )
+        )
+
+        logger.info("Sending added to chat notification to user $recipientUserId")
+        sendWithRetry(notification = notification)
+    }
+
     fun sendWithRetry(
         notification: PushNotification,
         attempt: Int = 0

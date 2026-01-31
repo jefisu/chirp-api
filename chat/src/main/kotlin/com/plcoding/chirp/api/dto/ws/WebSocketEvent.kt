@@ -11,7 +11,10 @@ enum class OutgoingWebSocketMessageType {
     PROFILE_PICTURE_UPDATED,
     CHAT_PARTICIPANTS_CHANGED,
     TYPING_EVENT,
-    ERROR
+    ERROR,
+    CHAT_EVENT,
+    CHAT_DELETED,
+    REMOVED_FROM_CHAT
 }
 
 data class IncomingWebSocketMessage(
