@@ -6,7 +6,7 @@ import com.plcoding.chirp.domain.exception.InvalidProfilePictureException
 import com.plcoding.chirp.domain.exception.StorageException
 import com.plcoding.chirp.domain.models.FileUploadCredentials
 import com.plcoding.chirp.domain.type.UserId
-import com.plcoding.chirp.infra.storage.StorageDestination.ChatImage
+import com.plcoding.chirp.infra.storage.StorageDestination.Chat
 import com.plcoding.chirp.infra.storage.StorageDestination.ProfilePicture
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -21,10 +21,19 @@ class SupabaseStorageService(
 ) {
     companion object {
         private val allowedMimeTypes = mapOf(
+            // Images
             "image/jpeg" to "jpg",
             "image/jpg" to "jpg",
             "image/png" to "png",
             "image/webp" to "webp",
+            // Audio
+            "audio/mpeg" to "mp3",
+            "audio/mp4" to "m4a",
+            "audio/x-m4a" to "m4a",
+            "audio/aac" to "aac",
+            "audio/ogg" to "ogg",
+            "audio/opus" to "opus",
+            "audio/wav" to "wav",
         )
     }
 
@@ -39,7 +48,7 @@ class SupabaseStorageService(
         val fileName = "user_${userId}_${UUID.randomUUID()}.$extension"
         val path = when (destination) {
             is ProfilePicture -> "${destination.bucket}/$fileName"
-            is ChatImage -> "${destination.bucket}/${destination.chatId}/$fileName"
+            is Chat -> with(destination) { "$bucket/$chatId/$subFolder/$fileName" }
         }
 
         val publicUrl = "$supabaseUrl/storage/v1/object/public/$path"

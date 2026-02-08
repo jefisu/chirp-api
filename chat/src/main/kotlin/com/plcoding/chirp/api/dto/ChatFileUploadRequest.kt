@@ -10,5 +10,8 @@ data class ChatFileUploadRequest @JsonCreator constructor(
     val fileName: String,
     @JsonProperty("mimeType")
     @field:NotBlank
-    val mimeType: String
+    val mimeType: String,
+    @JsonProperty("destination")
+    @field:NotBlank
+    val destination: String
 )

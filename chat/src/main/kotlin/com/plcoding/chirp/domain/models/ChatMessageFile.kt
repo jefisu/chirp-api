@@ -13,5 +13,6 @@ data class ChatMessageFile(
 )
 
 enum class ChatMessageFileType {
-    IMAGE
+    IMAGE,
+    AUDIO
 }

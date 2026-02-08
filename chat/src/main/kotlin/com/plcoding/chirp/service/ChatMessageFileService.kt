@@ -35,10 +35,15 @@ class ChatMessageFileService(
         }
 
         return requests.map { request ->
+            val storageDestination = StorageDestination.Chat(
+                chatId = chatId,
+                subFolder = request.destination
+            )
+
             val credentials = supabaseStorageService.generateSignedUploadUrl(
                 userId = userId,
                 mimeType = request.mimeType,
-                destination = StorageDestination.ChatImage(chatId)
+                destination = storageDestination
             )
             ChatFileUploadDto(
                 fileName = request.fileName,
@@ -53,7 +58,7 @@ class ChatMessageFileService(
     @Scheduled(cron = "0 0 3 * * *")
     fun cleanUpOrphanedFiles() {
         logger.info("Starting orphaned files cleanup")
-        val bucket = "chat-images"
+        val bucket = "chat"
         val rootFiles = supabaseStorageService.listFiles(bucket = bucket)
 
         rootFiles.forEach { folder ->
